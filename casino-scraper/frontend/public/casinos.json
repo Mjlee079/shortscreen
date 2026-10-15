@@ -1,0 +1,30 @@
+{
+  "casinos": [
+    {
+      "name": "Unknown Casino",
+      "welcome_bonus": null,
+      "wagering_requirement": null,
+      "minimum_deposit": null,
+      "source_url": "https://www.askgamblers.com/casino-bonuses",
+      "scraped_at": "2026-10-15T20:51:35.248883+00:00"
+    },
+    {
+      "name": "Unknown Casino",
+      "welcome_bonus": null,
+      "wagering_requirement": null,
+      "minimum_deposit": null,
+      "source_url": "https://www.askgamblers.com/casino-bonuses",
+      "scraped_at": "2026-10-15T20:51:37.289531+00:00"
+    },
+    {
+      "name": "Unknown Casino",
+      "welcome_bonus": null,
+      "wagering_requirement": null,
+      "minimum_deposit": null,
+      "source_url": "https://www.askgamblers.com/casino-bonuses",
+      "scraped_at": "2026-10-15T20:51:39.334896+00:00"
+    }
+  ],
+  "source": "https://www.askgamblers.com/casino-bonuses",
+  "count": 3
+}
