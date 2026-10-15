@@ -1,0 +1,49 @@
+Short screening task: casino bonus scraper
+Oct 10, 2026
+Pull bonus data for 3 online casinos from one public source and show it on a single web
+page. The task is capped at 3 hours and is due within 3 working days.
+Whatto build
+Two small pieces, built with an AI coding tool of your choice (Claude Code, Cursor,
+ChatGPT or similar).
+1. A scraper script
+Pulls 3 casinos from one public source of your choice: a casino's own promotions page
+or an existing comparison site.
+Extracts four fields per casino and writes them to a JSON file.
+Uses a language model for at least one step, to turn the free-text bonus terms into the
+structured fields.
+Runs with a single command.
+Respects robots.txt and does not bypass logins, CAPTCHAs or blocks. If a source
+blocks you, switch source.
+Typing the data in by hand does not meet the requirement.
+2. One web page
+A table of the 3 casinos, generated from the JSON file.
+Published on any free host (GitHub Pages, Netlify, Vercel or similar).
+Design does not matter. It needs to be readable on a phone.
+Field Example
+Welcome bonus 100% up to 500 EUR
+Wagering requirement (multiplier) 35
+Minimum deposit 20 EUR
+Source URL Link to the page it was pulled from
+Short screening task: casino bonus scraper
+Page 1 of 2
+Written part
+Half a page, in your own words: how you would take this to production for a site with 200
+casinos, updated daily. The role owns the full stack, so be specific about what you would
+actually use.
+Where it runs: which server or cloud, and why.
+Which database, and how it is backed up.
+Domain, DNS and HTTPS.
+How the daily scraper run is scheduled, and how you would know it failed.
+A rough monthly cost.
+Whatto submit
+Stop at 3 hours even if something is unfinished, and tell us what is missing. Questions are
+welcome at any point.
+A link to the live page.
+A Git repo with the script, the JSON output and a short README: how to install and
+run.
+The written part.
+Five lines on AI: which tool you used, and one place where it was wrong and how you
+caught it.
+How long it took you.
+Short screening task: casino bonus scraper
+Page 2 of 2

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casino Bonuses</style>
+</head>
+<body>
+<div class="container"><h1>Casino Bonus Comparison</h1>
+<table><thead><tr><th>Casino</th><th>Welcome Bonus</th><th>Wagering Requirement</th><th>Minimum Deposit</th><th>Source</th></tr></thead><tbody id="tbl"></tbody></table></div>
+<script>fetch("casinos.json").then(r=>r.json()).then(d=>{const t=document.getElementById("tbl");d.forEach(c=>{const r=document.createElement("tr");r.innerHTML="<td>"+c.name+"</td><td>"+c.welcome_bonus+"</td><td>"+c.wagering_requirement+"</td><td>"+c.minimum_deposit+"</td><td><a href="+c.source_url+" target=_blank>Visit</a></td>";t.appendChild(r)})}).catch(e=>{document.getElementById("tbl").innerHTML="<tr><td colspan=5>Error</td></tr>"})</script>
+</body>
+</html>
