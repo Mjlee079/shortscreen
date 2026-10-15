@@ -1,0 +1,30 @@
+{
+  "casinos": [
+    {
+      "name": "Jackpotter Casino",
+      "welcome_bonus": null,
+      "wagering_requirement": null,
+      "minimum_deposit": null,
+      "source_url": "https://www.askgamblers.com/casino-bonuses/latest/jackpotter-casino-bonus-50-free-spins-2026-02-24",
+      "scraped_at": "2026-10-15T20:43:37.370128+00:00"
+    },
+    {
+      "name": "Iwild Casino 200percent",
+      "welcome_bonus": "200% up to 1000",
+      "wagering_requirement": null,
+      "minimum_deposit": null,
+      "source_url": "https://www.askgamblers.com/casino-bonuses/latest/iwild-casino-200percent-up-to-eur1000-2024-08-15",
+      "scraped_at": "2026-10-15T20:43:40.954992+00:00"
+    },
+    {
+      "name": "Blazebet Casino",
+      "welcome_bonus": "100% up to 1000",
+      "wagering_requirement": null,
+      "minimum_deposit": null,
+      "source_url": "https://www.askgamblers.com/casino-bonuses/latest/blazebet-casino-bonus-100percent-up-to-eur1000-77-free-spins-at-blazebet-2026-09-18",
+      "scraped_at": "2026-10-15T20:43:45.018434+00:00"
+    }
+  ],
+  "source": "https://www.askgamblers.com/casino-bonuses",
+  "count": 3
+}
