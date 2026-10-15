@@ -84,7 +84,7 @@ npm run build
    - Publish directory: `dist`
 3. Go to **Site settings** → **Environment variables** → **Add variable**:
    - Key: `OPENROUTER_API_KEY`
-   - Value: `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`
+   - Value: your OpenRouter API key
 4. Click **Deploy site**. Your site will be live at a URL like: `https://random-name.netlify.app`
 
 **Daily auto-update (optional):**
@@ -128,7 +128,7 @@ The project includes a GitHub Actions workflow that:
 3. Go to **https://github.com/Mjlee079/shortscreen/settings/secrets/actions**
 4. Click **New repository secret**
 5. Name: `OPENROUTER_API_KEY`
-6. Value: `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`
+6. Value: your OpenRouter API key
 7. The workflow will trigger on push to `main`
 
 Live site: **https://mjlee079.github.io/shortscreen/**
