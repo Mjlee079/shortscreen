@@ -123,11 +123,18 @@ Tool used: OpenCode with the @python-pro, @react-expert,
 @secure-code-guardian, @test-master, @sre-engineer, @architecture-designer,
 @code-documenter, @spec-miner, and @the-fool skills.
 
+LLM backend: OpenRouter with NVIDIA's free Nemotron model
+(`nvidia/nemotron-3-super-120b-a12b:free`), accessed via an OpenAI-compatible
+client. API key: `OPENROUTER_API_KEY` environment variable.
+
 One place where AI was wrong: The initial scraper draft used
 `openai.ChatCompletion.create` (the legacy v0.x OpenAI SDK API) and
 `BeautifulSoup.find_class()` (which does not exist — BeautifulSoup uses
 `find(class_=...)` or `select_one()`). It also disabled SSL verification
-with `verify=False`, which violates secure-coding guidelines.
+with `verify=False`, which violates secure-coding guidelines. Additionally,
+the first NVIDIA model choice (`nvidia/nemotron-4-340b-instruct`) returned
+a 404 on OpenRouter; switching to `nvidia/nemotron-3-super-120b-a12b:free`
+resolved it.
 
 How it was caught: The code was reviewed against the @python-pro type
 safety and mypy strict requirements, the @secure-code-guardian
@@ -135,7 +142,8 @@ no-hardcoded-secrets / TLS rules, and manual reading of the BeautifulSoup
 docs. The OpenAI SDK was updated to the v1.x client
 (`OpenAI().chat.completions.create`), `find_class` was replaced with
 `select_one`, and `verify=False` was removed so certificate verification
-is enforced.
+is enforced. The model 404 was caught at runtime and fixed by querying
+OpenRouter's model list for available free NVIDIA models.
 
 ## Time Spent
 

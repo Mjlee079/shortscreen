@@ -15,7 +15,7 @@ A Python scraper that pulls casino bonus data from public sources and a web page
   4. Source URL (link to the page it was pulled from)
 - Respects robots.txt
 - Runs with a single command: `python src/scraper.py`
-- Falls back to manual parsing if OpenAI API key is not available
+- Falls back to regex parsing if no LLM API key is available
 
 ### Web Page (`public/casino-bonuses/index.html`)
 - Displays the 3 casinos in a responsive table
@@ -32,13 +32,17 @@ A Python scraper that pulls casino bonus data from public sources and a web page
 ## Requirements
 - Python 3.8+
 - `requests`, `beautifulsoup4`, `openai` packages
-- OpenAI API key (optional - manual parsing fallback available)
+- LLM API key (optional - regex parsing fallback available):
+  - OpenRouter (NVIDIA Nemotron): set `OPENROUTER_API_KEY`
+  - OpenAI: set `OPENAI_API_KEY`
 
 ## Installation
 
 1. Clone the repository
 2. Install dependencies: `pip install requests beautifulsoup4 openai`
-3. Set up OpenAI API key (optional): `export OPENAI_API_KEY=your_key_here`
+3. Set up LLM API key (optional):
+   - OpenRouter (NVIDIA Nemotron): `$env:OPENROUTER_API_KEY="sk-or-..."` (PowerShell) or `export OPENROUTER_API_KEY="sk-or-..."` (bash)
+   - OpenAI: `export OPENAI_API_KEY="sk-..."`
 4. Run the scraper: `python src/scraper.py`
 5. Open the web page: open `public/casino-bonuses/index.html` in a browser
 
@@ -65,5 +69,5 @@ The output will be saved to `casinos.json`.
 
 ## Notes
 - The scraper respects robots.txt and does not bypass logins, CAPTCHAs or blocks
-- If the OpenAI API key is not set, the script uses manual parsing as a fallback
+- If no LLM API key is set, the script uses regex parsing as a fallback
 - The web page can be hosted on any static hosting service (GitHub Pages, Netlify, Vercel)

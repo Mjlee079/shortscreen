@@ -23,7 +23,8 @@ Build a casino bonus scraper that:
 - Include a written part: production scaling to 200 casinos daily (where it runs, database, backups, domain/DNS/HTTPS, daily scheduling + failure alerting, rough monthly cost).
 
 ## Stack (from @casino-scraper/specs/architecture.md)
-- Scraper: Python 3.11+, requests + BeautifulSoup, OpenAI API for LLM parsing.
+- Scraper: Python 3.11+, requests + BeautifulSoup, LLM API for parsing (OpenRouter with NVIDIA Nemotron free model, or OpenAI)
+- LLM: OpenRouter `nvidia/nemotron-3-super-120b-a12b:free` (default) or OpenAI `gpt-4o-mini`
 - Frontend: React 19 + Vite + TypeScript, Tailwind CSS.
 - Data: casinos.json.
 - Hosting: GitHub Pages.
@@ -72,7 +73,9 @@ Expected output:
 - API key from environment variable only (never hardcoded).
 
 ## Usage Instructions
-- Model: GPT-4o-mini (or equivalent), temperature 0.2, JSON mode / function calling.
+- Model: NVIDIA Nemotron via OpenRouter (`nvidia/nemotron-3-super-120b-a12b:free`), temperature 0.2, JSON mode.
+  Set `OPENROUTER_API_KEY` env var. Falls back to OpenAI `gpt-4o-mini` if `OPENAI_API_KEY` is set instead.
+  Falls back to regex parsing if no key is available.
 - Max tokens: ~1000 per LLM parse call.
 - Run: `python src/scraper.py` then `cd frontend && npm run dev` (or build for GitHub Pages).
 - Required env var: OPENAI_API_KEY

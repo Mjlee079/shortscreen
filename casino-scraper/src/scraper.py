@@ -64,15 +64,20 @@ HEADERS: dict[str, str] = {
 }
 
 # Regex fallback patterns (used when LLM is unavailable or fails).
+# Bonus percentage: "100% up to 500 EUR" or "100% up to 500" (currency optional)
 _BONUS_PCT_RE = re.compile(
-    r"(\d+(?:\.\d+)?)\s*%\s*(?:up\s*to|up to|max\s*of)?\s*([\d,]+(?:\.\d+)?)\s*([A-Z]{3})",
+    r"(\d+(?:\.\d+)?)\s*%\s*(?:up\s*to|up to|max\s*of)?\s*([\d,]+(?:\.\d+)?)\s*([A-Z]{3})?",
     re.IGNORECASE,
 )
+# Wagering requirement: requires either a wagering word ("wagering 35", "turnover 40")
+# or an "x" suffix ("35x", "40×"). Bare numbers are not matched.
 _WAGERING_RE = re.compile(
-    r"(\d+)\s*[x×]\s*(?:wager|turnover|playthrough)?", re.IGNORECASE
+    r"(?:wager(?:ing)?|turnover|playthrough)\s*(\d+)\s*[x×]?|(\d+)\s*[x×]",
+    re.IGNORECASE,
 )
+# Minimum deposit: "min deposit 20 EUR", "minimum deposit: 20", "deposit 20 EUR"
 _DEPOSIT_RE = re.compile(
-    r"(?:min(?:imum)?\s*)?deposit\s*(?:of)?\s*([\d,]+(?:\.\d+)?)\s*([A-Z]{3})",
+    r"(?:min(?:imum)?\s*)?deposit\s*(?:of)?\s*[:]?\s*([\d,]+(?:\.\d+)?)\s*([A-Z]{3})?",
     re.IGNORECASE,
 )
 
@@ -145,8 +150,15 @@ def fetch_page(url: str, rp: RobotFileParser | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# LLM parsing
+# LLM configuration
 # ---------------------------------------------------------------------------
+
+# OpenRouter provides OpenAI-compatible access to NVIDIA's free models
+# (e.g., nemotron-4-340b-instruct, llama-3.1-nemotron-70b-instruct).
+# Set OPENROUTER_API_KEY to use OpenRouter instead of OpenAI.
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+NVIDIA_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+OPENAI_MODEL = "gpt-4o-mini"
 
 def parse_bonus_with_llm(bonus_text: str) -> dict[str, str | int | None]:
     """Use an LLM to convert free-text bonus terms into structured fields.
@@ -158,9 +170,23 @@ def parse_bonus_with_llm(bonus_text: str) -> dict[str, str | int | None]:
         A dictionary with keys welcome_bonus, wagering_requirement,
         minimum_deposit. Values may be None if not determinable.
     """
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("Warning: OPENAI_API_KEY not set. Using regex fallback.")
+    # Determine LLM backend from environment (read at call time so tests
+    # can patch os.environ after module import).
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    if openrouter_key:
+        api_key = openrouter_key
+        base_url = OPENROUTER_BASE_URL
+        model = NVIDIA_MODEL
+        backend_name = "OpenRouter (NVIDIA Nemotron)"
+    elif openai_key:
+        api_key = openai_key
+        base_url = None
+        model = OPENAI_MODEL
+        backend_name = "OpenAI (gpt-4o-mini)"
+    else:
+        print("Warning: No LLM API key set (OPENROUTER_API_KEY or OPENAI_API_KEY). Using regex fallback.")
         return _parse_bonus_regex(bonus_text)
 
     prompt = f"""Extract the following fields from this casino welcome bonus text:
@@ -177,12 +203,25 @@ explicitly stated."""
     try:
         from openai import OpenAI
 
-        client = OpenAI(api_key=api_key)
+        if base_url is not None:
+            client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
+            client = OpenAI(api_key=api_key)
+
+        # OpenRouter requires additional headers for attribution.
+        extra_headers: dict[str, str] | None = None
+        if openrouter_key:
+            extra_headers = {
+                "HTTP-Referer": "https://github.com/casino-bonus-scraper",
+                "X-Title": "Casino Bonus Scraper",
+            }
+
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=500,
+            extra_headers=extra_headers,
         )
         content = response.choices[0].message.content
         if content is None:
@@ -198,7 +237,7 @@ explicitly stated."""
             "minimum_deposit": result.get("minimum_deposit"),
         }
     except Exception as exc:  # pylint: disable=broad-except
-        print(f"LLM parsing error: {exc}. Falling back to regex.")
+        print(f"LLM parsing error ({backend_name}): {exc}. Falling back to regex.")
         return _parse_bonus_regex(bonus_text)
 
 
@@ -212,24 +251,32 @@ def _parse_bonus_regex(bonus_text: str) -> dict[str, str | int | None]:
         A dictionary with keys welcome_bonus, wagering_requirement,
         minimum_deposit. Values may be None.
     """
+    # Replace replacement characters, strip currency symbols, normalize whitespace.
+    cleaned = bonus_text.replace("\ufffd", " ")
+    cleaned = re.sub(r"[€$£¥]", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
     welcome_bonus: str | None = None
     wagering_requirement: int | None = None
     minimum_deposit: str | None = None
 
-    m = _BONUS_PCT_RE.search(bonus_text)
+    m = _BONUS_PCT_RE.search(cleaned)
     if m:
-        welcome_bonus = f"{m.group(1)}% up to {m.group(2)} {m.group(3)}"
+        currency = f" {m.group(3)}" if m.group(3) else ""
+        welcome_bonus = f"{m.group(1)}% up to {m.group(2)}{currency}"
 
-    m = _WAGERING_RE.search(bonus_text)
+    m = _WAGERING_RE.search(cleaned)
     if m:
+        wagering_str = m.group(1) or m.group(2)
         try:
-            wagering_requirement = int(m.group(1))
-        except ValueError:
+            wagering_requirement = int(wagering_str)
+        except (ValueError, TypeError):
             wagering_requirement = None
 
-    m = _DEPOSIT_RE.search(bonus_text)
+    m = _DEPOSIT_RE.search(cleaned)
     if m:
-        minimum_deposit = f"{m.group(1)} {m.group(2)}"
+        currency = f" {m.group(2)}" if m.group(2) else ""
+        minimum_deposit = f"{m.group(1)}{currency}"
 
     return {
         "welcome_bonus": welcome_bonus,
@@ -241,6 +288,49 @@ def _parse_bonus_regex(bonus_text: str) -> dict[str, str | int | None]:
 # ---------------------------------------------------------------------------
 # HTML parsing
 # ---------------------------------------------------------------------------
+
+def _parse_casino_name_from_url(href: str | None) -> str:
+    """Parse a human-readable casino name from a bonus detail URL.
+
+    AskGamblers URLs look like:
+    /casino-bonuses/latest/jackpotter-casino-bonus-50-free-spins-2026-02-24
+
+    We extract the casino name portion (before the first bonus-related word).
+
+    Args:
+        href: The bonus detail page URL path.
+
+    Returns:
+        A title-cased casino name, or "Unknown Casino" if unparseable.
+    """
+    if not href:
+        return "Unknown Casino"
+
+    # Extract the last path segment
+    segment = href.rstrip("/").split("/")[-1]
+
+    # Bonus-related words that mark the end of the casino name
+    stop_words = [
+        "bonus", "free", "spins", "deposit", "welcome", "match", "reload",
+        "cashback", "no", "percent", "up", "to", "eur", "usd", "gbp",
+    ]
+
+    parts = segment.split("-")
+    name_parts: list[str] = []
+    for part in parts:
+        lower = part.lower()
+        # Skip pure numbers and dates
+        if lower.isdigit() or (len(lower) == 8 and lower.isdigit()):
+            break
+        if lower in stop_words:
+            break
+        name_parts.append(part)
+
+    if not name_parts:
+        return "Unknown Casino"
+
+    return " ".join(p.capitalize() for p in name_parts)
+
 
 def _extract_text(element: Any, selectors: list[str]) -> str | None:
     """Try a list of CSS selectors on an element and return the first match.
@@ -259,22 +349,68 @@ def _extract_text(element: Any, selectors: list[str]) -> str | None:
     return None
 
 
-def extract_casino_data(element: Any, source_url: str) -> CasinoBonus:
+def _extract_attribute(element: Any, selector: str, attribute: str) -> str | None:
+    """Extract an attribute value from the first element matching a selector.
+
+    Args:
+        element: BeautifulSoup element to search within.
+        selector: CSS selector string.
+        attribute: HTML attribute name to extract.
+
+    Returns:
+        The attribute value, or None if not found.
+    """
+    found = element.select_one(selector)
+    if found:
+        return cast(str | None, found.get(attribute))
+    return None
+
+
+def extract_casino_data(element: Any, base_url: str) -> CasinoBonus:
     """Extract structured bonus data from a single casino HTML element.
 
     Args:
         element: BeautifulSoup element representing one casino offer.
-        source_url: The URL the page was fetched from.
+        base_url: The base URL of the listing page (for resolving relative links).
 
     Returns:
         A populated CasinoBonus dataclass.
     """
-    name = _extract_text(element, ["h3", "h2", ".casino-name", ".name", ".title"]) or "Unknown Casino"
+    # Extract the bonus detail page URL from the card header link.
+    detail_href = _extract_attribute(element, "a.ag-card-header", "href")
 
+    # Extract casino name: try parsing from the bonus detail URL first
+    # (most reliable for askgamblers.com), then fall back to heading selectors.
+    name = "Unknown Casino"
+    if detail_href:
+        name = _parse_casino_name_from_url(detail_href)
+    if name == "Unknown Casino":
+        heading_name = _extract_text(element, ["h3", "h2", ".casino-name", ".name", ".title"])
+        if heading_name:
+            name = heading_name
+
+    # Extract bonus title text: try askgamblers-specific selector first,
+    # then fall back to generic bonus selectors.
     bonus_text = _extract_text(
         element,
-        [".bonus", ".welcome-bonus", ".promo", ".offer", ".bonus-text", ".offer-text"],
+        ["a.ag-card-body-title", ".ag-card-body-title", ".bonus", ".welcome-bonus",
+         ".promo", ".offer", ".bonus-text", ".offer-text"],
     )
+
+    # Build the full source URL from the detail link.
+    source_url: str
+    if detail_href:
+        if detail_href.startswith("http"):
+            source_url = detail_href
+        elif detail_href.startswith("/"):
+            from urllib.parse import urlparse
+
+            parsed = urlparse(base_url)
+            source_url = parsed.scheme + "://" + parsed.netloc + detail_href
+        else:
+            source_url = base_url.rstrip("/") + "/" + detail_href
+    else:
+        source_url = base_url
 
     structured: dict[str, str | int | None] = {
         "welcome_bonus": None,
@@ -313,6 +449,7 @@ def find_casino_elements(soup: BeautifulSoup) -> list[Any]:
         A list of BeautifulSoup elements, each representing a casino offer.
     """
     candidate_selectors: list[str] = [
+        "div.ag-card.bonus-card",
         "article.offer",
         "div.offer-list__item",
         "div.bonus-offer",
@@ -415,6 +552,19 @@ def scrape(source_url: str) -> ScrapeResult | None:
 def main() -> None:
     """Entry point: try each source candidate until one succeeds."""
     output_path = Path(__file__).resolve().parent.parent / "casinos.json"
+
+    # Determine LLM backend for display (read at call time).
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    if openrouter_key:
+        llm_backend = "OpenRouter (NVIDIA Nemotron)"
+    elif openai_key:
+        llm_backend = "OpenAI (gpt-4o-mini)"
+    else:
+        llm_backend = "None (regex fallback only)"
+    print(f"LLM backend: {llm_backend}")
+    print()
 
     last_error: str | None = None
     for source_url in SOURCE_CANDIDATES:
