@@ -9,7 +9,7 @@ interface CasinoTableProps {
 
 /** Format a wagering requirement for display. */
 function formatWagering(value: number | null): string {
-  if (value === null || value === undefined) return "N/A";
+  if (value === null || value === undefined) return "";
   return `${value}x`;
 }
 
@@ -88,7 +88,7 @@ export default function CasinoTable({ casinos, source }: CasinoTableProps) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-gray-900">
-                  {casino.welcome_bonus ?? "N/A"}
+                  {casino.welcome_bonus}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
@@ -98,7 +98,7 @@ export default function CasinoTable({ casinos, source }: CasinoTableProps) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-gray-900">
-                  {casino.minimum_deposit ?? "N/A"}
+                  {casino.minimum_deposit}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
