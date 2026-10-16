@@ -29,8 +29,11 @@ export default function CasinoTable({ casinos, source }: CasinoTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <caption className="sr-only">
+        <caption className="sr-only visually-hidden">
           Casino bonus comparison table
+        </caption>
+        <caption className="caption-bottom text-xs text-gray-500">
+          Table showing casino welcome bonuses with wagering requirements and minimum deposits
         </caption>
         <thead className="bg-gray-50">
           <tr>
@@ -74,7 +77,10 @@ export default function CasinoTable({ casinos, source }: CasinoTableProps) {
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {casinos.map((casino: CasinoBonus) => (
-            <tr key={casino.source_url} className="hover:bg-gray-50">
+            <tr
+              key={casino.name}
+              className="hover:bg-gray-50 focus-visible:bg-gray-100"
+            >
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-gray-900">
                   {casino.name}
@@ -115,6 +121,7 @@ export default function CasinoTable({ casinos, source }: CasinoTableProps) {
         </tbody>
       </table>
       <p className="mt-4 text-xs text-gray-500">
+        <span className="sr-only">Data source: </span>
         Data source:{" "}
         <a
           href={source}

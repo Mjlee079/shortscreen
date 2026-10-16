@@ -43,15 +43,14 @@ export default function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen p-4 bg-gray-50 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="min-h-screen p-4 sm:p-6 md:p-8 lg:p-12 bg-gray-50 text-center">
+        <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-4">
           Casino Bonus Scraper
         </h1>
         <p className="text-red-600 mb-6">{error}</p>
-        <p className="text-sm text-gray-500">
-          Make sure casinos.json exists at the root of the site or run the
-          scraper locally and copy the file into the frontend/dist folder.
-        </p>
+        <p className="text-red-600 mb-6">
+Unable to load casino data. Check that casinos.json is deployed to the root of your site, then refresh the page.
+</p>
       </div>
     );
   }
