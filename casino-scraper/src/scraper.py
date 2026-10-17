@@ -48,9 +48,10 @@ USER_AGENT = (
 
 # Ordered list of candidate sources. The scraper tries each in turn until
 # one succeeds. All are public comparison/promotion pages.
+# casinodaddy.com is first: fully server-rendered casino bonus cards.
 SOURCE_CANDIDATES: list[str] = [
-    "https://www.casinobonus.com/bonuses",
-    "https://www.bonusfinder.com/casino-bonuses",
+    "https://casinodaddy.com/casino-bonuses/",
+    "https://www.gamblingsites.org/online-casinos/bonuses/",
     "https://www.askgamblers.com/casino-bonuses",
 ]
 
@@ -264,6 +265,16 @@ def _parse_bonus_regex(bonus_text: str) -> dict[str, str | int | None]:
     if m:
         currency = f" {m.group(3)}" if m.group(3) else ""
         welcome_bonus = f"{m.group(1)}% up to {m.group(2)}{currency}"
+    else:
+        # "Up to 300 + 170 FS" style (no percentage prefix).
+        m_up_to = re.search(
+            r"up\s*to\s*([\d,]+(?:\.\d+)?)(?:\s*\+\s*(\d+)\s*FS)?",
+            cleaned,
+            re.IGNORECASE,
+        )
+        if m_up_to:
+            fs = f" + {m_up_to.group(2)} FS" if m_up_to.group(2) else ""
+            welcome_bonus = f"Up to {m_up_to.group(1)}{fs}"
 
     m = _WAGERING_RE.search(cleaned)
     if m:
@@ -376,25 +387,50 @@ def extract_casino_data(element: Any, base_url: str) -> CasinoBonus:
     Returns:
         A populated CasinoBonus dataclass.
     """
-    # Extract the bonus detail page URL from the card header link.
+    # Extract the bonus detail page URL: casinodaddy review link first
+    # (a.fs-12... linking to /<casino>/), then askgamblers card header,
+    # then any link containing "/visit/".
     detail_href = _extract_attribute(element, "a.ag-card-header", "href")
+    if not detail_href:
+        # casinodaddy: the "X Casino Review" link is preferred over the
+        # affiliate "Play Now" (/visit/) link.
+        for link in element.select("a"):
+            href = link.get("href") or ""
+            text = (link.get_text(strip=True) or "").lower()
+            if href and "review" in text:
+                detail_href = href
+                break
+        if not detail_href:
+            for link in element.select("a"):
+                href = link.get("href") or ""
+                if href and "/visit/" in href:
+                    detail_href = href
+                    break
 
-    # Extract casino name: try parsing from the bonus detail URL first
-    # (most reliable for askgamblers.com), then fall back to heading selectors.
+    # Extract casino name: try parsing from the bonus detail URL first,
+    # then the review link text (strip trailing "review"), then headings.
     name = "Unknown Casino"
     if detail_href:
         name = _parse_casino_name_from_url(detail_href)
+    if name == "Unknown Casino":
+        for link in element.select("a"):
+            text = link.get_text(strip=True)
+            if text and text.lower().endswith(" review"):
+                name = text[: -len(" Review")].strip()
+                break
     if name == "Unknown Casino":
         heading_name = _extract_text(element, ["h3", "h2", ".casino-name", ".name", ".title"])
         if heading_name:
             name = heading_name
 
-    # Extract bonus title text: try askgamblers-specific selector first,
-    # then fall back to generic bonus selectors.
+    # Extract bonus title text: casinodaddy bonus line (p.h5 tt-u) first,
+    # then askgamblers-specific selector, then generic bonus selectors.
     bonus_text = _extract_text(
         element,
-        ["a.ag-card-body-title", ".ag-card-body-title", ".bonus", ".welcome-bonus",
-         ".promo", ".offer", ".bonus-text", ".offer-text"],
+        ["p.h5.ta-c", "p.tt-u.h5", "div.mb-10.px-10 p.h5",
+         "a.ag-card-body-title", ".ag-card-body-title",
+         ".bonus", ".welcome-bonus", ".promo", ".offer",
+         ".bonus-text", ".offer-text"],
     )
 
     # Build the full source URL from the detail link.
@@ -426,6 +462,37 @@ def extract_casino_data(element: Any, base_url: str) -> CasinoBonus:
         if "%" in full_text and ("up to" in full_text.lower() or "maximum" in full_text.lower()):
             structured = parse_bonus_with_llm(full_text)
 
+    # casinodaddy fallback: min deposit lives in a deferred "cc__back__item"
+    # block ("Min deposit€10"). Fill it in if the LLM/regex could not.
+    if not structured.get("minimum_deposit"):
+        for item in element.select("div.cc__back__item"):
+            text = item.get_text(" ", strip=True)
+            if "min deposit" in text.lower():
+                value = re.sub(r"(?i)min\s*deposit\s*", "", text).strip()
+                # Repair mojibake: "\ufffd10" -> "EUR 10" style value.
+                value = re.sub(r"[\ufffd€$£¥]+", " EUR ", value)
+                value = re.sub(r"\s+", " ", value).strip()
+                if value:
+                    structured["minimum_deposit"] = value
+                break
+
+    # Wagering requirement is rarely on the listing card. If still unknown
+    # and we have a review page, fetch it once and parse the wagering text.
+    if structured.get("wagering_requirement") is None:
+        review_rp = load_robots_txt(source_url)
+        review_html = fetch_page(source_url, review_rp)
+        if review_html:
+            review_soup = BeautifulSoup(review_html, "html.parser")
+            page_text = review_soup.get_text(" ", strip=True)
+            page_text = page_text.replace("\ufffd", " ")
+            wm = re.search(
+                r"(?:wager(?:ing)?|playthrough|turnover)[^\d]{0,20}(\d{1,3})\s*[x×]?",
+                page_text,
+                re.IGNORECASE,
+            )
+            if wm:
+                structured["wagering_requirement"] = int(wm.group(1))
+
     return CasinoBonus(
         name=name,
         welcome_bonus=cast(str | None, structured.get("welcome_bonus")),
@@ -449,7 +516,11 @@ def find_casino_elements(soup: BeautifulSoup) -> list[Any]:
         A list of BeautifulSoup elements, each representing a casino offer.
     """
     candidate_selectors: list[str] = [
+        # casinodaddy.com casino bonus cards
+        "div.cc",
+        # askgamblers.com bonus cards
         "div.ag-card.bonus-card",
+        # generic comparison-site cards
         "article.offer",
         "div.offer-list__item",
         "div.bonus-offer",

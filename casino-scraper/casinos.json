@@ -1,30 +1,30 @@
 {
   "casinos": [
     {
-      "name": "Unknown Casino",
-      "welcome_bonus": null,
-      "wagering_requirement": null,
-      "minimum_deposit": null,
-      "source_url": "https://www.askgamblers.com/casino-bonuses",
-      "scraped_at": "2026-10-15T20:51:35.248883+00:00"
+      "name": "Ivibet Casino",
+      "welcome_bonus": "Up to 300 + 170 FS",
+      "wagering_requirement": 40,
+      "minimum_deposit": "EUR 10",
+      "source_url": "https://casinodaddy.com/ivibet-casino/",
+      "scraped_at": "2026-10-17T07:45:18.025437+00:00"
     },
     {
-      "name": "Unknown Casino",
-      "welcome_bonus": null,
-      "wagering_requirement": null,
-      "minimum_deposit": null,
-      "source_url": "https://www.askgamblers.com/casino-bonuses",
-      "scraped_at": "2026-10-15T20:51:37.289531+00:00"
+      "name": "Dazard Casino",
+      "welcome_bonus": "375% up to 5,250",
+      "wagering_requirement": 40,
+      "minimum_deposit": "20 EUR",
+      "source_url": "https://casinodaddy.com/dazard-casino/",
+      "scraped_at": "2026-10-17T07:45:24.214111+00:00"
     },
     {
-      "name": "Unknown Casino",
-      "welcome_bonus": null,
-      "wagering_requirement": null,
-      "minimum_deposit": null,
-      "source_url": "https://www.askgamblers.com/casino-bonuses",
-      "scraped_at": "2026-10-15T20:51:39.334896+00:00"
+      "name": "Lucky Riches Casino",
+      "welcome_bonus": "300% up to 5,500",
+      "wagering_requirement": 30,
+      "minimum_deposit": "EUR 10",
+      "source_url": "https://casinodaddy.com/lucky-riches-casino/",
+      "scraped_at": "2026-10-17T07:45:30.333663+00:00"
     }
   ],
-  "source": "https://www.askgamblers.com/casino-bonuses",
+  "source": "https://casinodaddy.com/casino-bonuses/",
   "count": 3
 }
